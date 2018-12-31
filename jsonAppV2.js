@@ -1,4 +1,8 @@
-/*Application to read and display contents from a JSON file birds */
+/*Application to read and display contents from a JSON files
+(1) Birds - (Birds.JSON)
+(2) Religion - (Religion.JSON)
+(3) Best Sellers Books - (Bestsellers.JSON)
+*/
 
 //Load libraries
 const fs = require('fs');
