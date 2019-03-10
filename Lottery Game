@@ -1,1 +1,408 @@
 
+/*
+Lotto Application
+
+Synopsis:
+(1)This game will take 3 players
+(2) Produce Weekly random Lotto winning numbers
+(3) Each Player will enter thier numbers for the week.
+(4) Mathing numbers will bank an amount for player
+(5) The winner will be the one with the hirst bank
+Math.floor((Math.random() * 100) + 1)
+
+*/
+
+//Load Libraries
+const rdLnSync = require('readline-sync'); //Take input from the keyboard
+const color = require('colors'); //Set the colors
+const say = require('say'); //Enable computer to speak to player
+
+
+//Arrays for both Machine and Player Numbers
+let playersOne = [];
+let playersTwo = [];
+let playersThree = [];
+let weeklyLottoNumber = [];
+
+//Player names
+let playerOneName = '';
+let playerTwoName = '';
+let playerThreeName = '';
+
+
+//Quit function
+PlayerQuit = (lottoFunc) => {
+
+
+    if (rdLnSync.keyInYN('Is this the only game player? ')) {
+
+        lottoMatch();
+    } else if ((playersOne == 0) || (playersTwo == 0) || (playersThree == 0)) {
+        
+        //Call function
+        lottoFunc(); 
+
+    } else {
+        console.log(color.red('No more player slots!! hit any key to proceed with game'));
+        rdLnSync.keyInPause();
+        
+        lottoMatch();
+    };
+
+};
+
+
+
+//Function to create the weekly random numbers
+LottoGen = () => {
+    let genNumbers = 0;
+        for (let i = 0; i < 7; i ++) {
+            genNumbers = Math.floor(Math.random() * 60);
+            weeklyLottoNumber.push(genNumbers);
+        };
+};
+
+
+//Function to take in User Number
+playerLottoNum = () => {
+    say.speak('Players menu. Select a player and enter your lotto numbers');
+    console.log('\033c');
+    console.log(color.cyan('---------------- PLAYERS MENU ----------------'));
+    console.log('');
+
+    console.log(color.green('Players'));
+    let playerArray = ['Player 1', 'Player 2', 'Player 3'];
+
+
+    //Player slot availability
+    console.log(color.red('Player status!!!'));
+    console.log('');
+    if (playersOne.length == 0) {
+        console.log(color.green('Player 1 Slot is available'));
+    } else {
+        console.log(color.red('Player 1 Slot is not available, select the next avalaible slot'));
+    };
+
+    if (playersTwo.length == 0) {
+        console.log(color.green('Player 2 Slot is available'))
+    } else {
+        console.log(color.red('Player 2 Slot is not available, select the next avalaible slot'));
+    };
+
+    if (playersThree.length == 0) {
+        console.log(color.green('Player 3 Slot is available'))
+    } else {
+        console.log(color.red('Player 2 Slot is not available, select the next avalaible slot'));
+    };
+
+   
+    let playSelect = rdLnSync.keyInSelect(playerArray, 'Enter player number: ');
+
+
+   
+
+        //Player 1 Condition
+    if (playerArray[playSelect] == 'Player 1') {
+
+        //Take Player one name
+        playerOneName = rdLnSync.question('Enter your name: ');
+
+        //Take in lotto numbers
+        for (let i = 0; i < 7; i ++) {
+            let inNum = rdLnSync.questionInt(color.yellow('Input number : '));
+
+            if (inNum > 60) {
+             console.log(color.red('Input must be between 0 and 60, Exiting...'));
+            
+             process.exit(0);
+            };
+          
+            playersOne.push(inNum);
+           
+        };
+        
+
+            //Player 2 Condition
+    } else if (playerArray[playSelect] == 'Player 2') {
+
+        for (let i = 0; i < 7; i ++) {
+            let inNum2 = rdLnSync.questionInt(color.yellow('Input number : '));
+
+            if (inNum2 > 60) {
+             console.log(color.red('Input must be between 0 and 60, Exiting...'));
+            
+             process.exit(0);
+            };
+          
+            playersTwo.push(inNum2);
+        };
+
+            //Player 3 Condition
+    } else if (playerArray[playSelect] == 'Player 3') {
+
+        for (let i = 0; i < 7; i ++) {
+            let inNum3 = rdLnSync.questionInt(color.yellow('Input number : '));
+
+            if (inNum3 > 60) {
+             console.log(color.red('Input must be between 0 and 60, Exiting...'));
+            
+             process.exit(0);
+            };
+          
+            playersThree.push(inNum3);
+        };
+    } else {
+        //Go to the main menu
+        mainMenu();
+    };
+
+    
+
+    //Player quit function
+    PlayerQuit(playerLottoNum);
+
+};
+
+
+
+
+//Call function for the weekly number call
+lottoWeeksResult = () => {
+
+    
+    console.log('\033c');
+    console.log(color.cyan('************ THE WEEKS RESULTS ********************'));
+    console.log('')
+    LottoGen();
+    console.log(color.green(weeklyLottoNumber));
+    say.speak(`The Weekly Lotto Numbers are ${weeklyLottoNumber}`);
+
+};
+
+
+//Function to perform match of player number and weekly draw
+lottoMatch = () => {
+
+    //Run weeks Lotto weeks results
+    lottoWeeksResult();
+
+    //Pause program to continue for matching
+    rdLnSync.keyInPause();
+    console.log('Matching process is starting now...');
+
+
+    //Array for counting
+    let matchArrayOne = [];
+    let matchArrayOneCount = 0;
+
+    let matchArrayTwo = [];
+    let matchArrayTwoCount = 0;
+
+    let matchArrayThree = [];
+    let matchArrayThreeCount = 0;
+
+ 
+    //Check player one against Lotto number
+    if (playersOne == 0) {
+
+        //Array Count
+        
+
+        console.log('');
+        console.log(color.red('No player 1 !!!'));
+        } else {
+
+            console.log('');
+            console.log(color.green('Number match for player 1'));
+            console.log('');
+
+            //Match Player 1 numbers
+            for (let i = 0; i < weeklyLottoNumber.length; i ++) {
+                for (let g = 0; g < playersOne.length; g ++) {
+                    if (weeklyLottoNumber[i] == playersOne[g]) {
+                        console.log(playersOne[g]);
+
+                        //Inset matches into an array for prize
+                        matchArrayOne.push(playersOne[g]);
+                                            
+                    };
+                    
+                };
+
+                
+            };
+
+            //Matching number count
+            matchArrayOneCount = matchArrayOne.length;
+            say.speak(`${playerOneName} lotto numbers are ${playersOne}. Number match = ${matchArrayOneCount}`);
+            console.log(color.yellow(`Your numbers: ${playersOne}`));
+            console.log(`Lotto numbers: ${weeklyLottoNumber}`);
+            console.log('');
+            console.log(color.cyan(matchArrayOneCount, `Matches`));
+
+            //Prize money
+            lottoPrizeMoney(matchArrayOneCount);
+
+            //Pause program to go to next player
+            rdLnSync.keyInPause();
+            console.log('Press any letter to go to next player...');
+
+
+    };
+    //Check player two against Lotto number
+    if (playersTwo == 0) {
+        console.log('');
+        console.log(color.red('No player 2 !!!'));
+        } else {
+
+            console.log('');
+            console.log(color.green('Number match for player 2'));
+            console.log('');
+            for (let i = 0; i < weeklyLottoNumber.length; i ++) {
+                for (let g = 0; g < playersTwo.length; g ++) {
+                    if (weeklyLottoNumber[i] == playersTwo[g]) {
+                        console.log(playersTwo[g]);    
+
+                        //Inset matches into an array for prize
+                        matchArrayTwo.push(playersTwo[g]);
+                    };
+                
+                };
+            
+            };
+
+            //Matching number count
+            matchArrayTwoCount = matchArrayTwo.length;
+            say.speak(`Player 2 lotto numbers are ${playersTwo}. Number match = ${matchArrayTwoCount}` );
+            console.log(color.yellow(`Your numbers: ${playersTwo}`));
+            console.log(`Lotto numbers: ${weeklyLottoNumber}`);
+            console.log('');
+            console.log(color.cyan(matchArrayTwoCount, `Matches`));
+
+            lottoPrizeMoney(matchArrayTwoCount);
+
+            //Pause program to go to next player
+            rdLnSync.keyInPause();
+            console.log('Press any letter to go to next player...');
+
+    };
+
+    //Check player three against Lotto number
+    if (playersThree == 0) {
+        console.log('');
+        console.log(color.red('No player 3 !!!'));
+        } else {
+
+            console.log('');
+            console.log(color.green('Number match for player 3'));
+            console.log('');
+            for (let i = 0; i < weeklyLottoNumber.length; i ++) {
+                for (let g = 0; g < playersThree.length; g ++) {
+                    if (weeklyLottoNumber[i] == playersThree[g]) {
+                        console.log(playersThree[g]);
+                        
+                        //Inset matches into an array for prize
+                        matchArrayThree.push(playersThree[g]);
+                    };
+                
+                };
+            
+            };
+
+
+            //Matching number count
+        matchArrayThreeCount = matchArrayThree.length;
+        say.speak(`Player 3 lotto numbers are ${playersThree}. Number match = ${matchArrayThreeCount}`);
+        console.log(color.yellow(`Your numbers: ${playersThree}`)) ;
+        console.log(`Lotto numbers: ${weeklyLottoNumber}`);
+        console.log('');
+        console.log(color.cyan(matchArrayThreeCount, `Matches`));
+
+        lottoPrizeMoney(matchArrayThreeCount);
+
+        //Pause program to go to next player
+        rdLnSync.keyInPause();
+        console.log('Press any letter to go to continue');
+        mainMenu();
+
+
+    };
+
+        
+
+};
+
+
+//Fuction to calculate prize money
+lottoPrizeMoney = (matchCount) => {
+
+    switch (matchCount) {
+
+        case 3:
+        console.log('Congratulation!!! you matched 3 numbers and have been awarded £10');
+        break;
+
+        case 4:
+        console.log('Congratulation!!! you matched 4 numbers and have been awarded £140.00 ');
+        break;
+
+        case 5:
+        console.log('Congratulation!!! you matched 5 numbers and have been awarded £1750.00 ');
+        break;
+
+        case 6:
+        console.log('Congratulation!!! you matched 5 numbers and have been awarded £1 Million ');
+        break;
+
+        default:
+        console.log('You matched less than 3 numbers. Better luck next time');
+        break;
+
+    };
+
+
+};
+
+//Main Menu
+mainMenu = () => {
+    say.speak('Welcome to the lotto guessing game. The game can be played by a maximum of 3 players. Good Luck')
+    console.log('\033c');
+    console.log('');
+    console.log(color.cyan('------------------ LOTTO GUESSING GAME ------------------'));
+    console.log('');
+    let menuArray = ['Lottery Game'];
+    let menuSelect = rdLnSync.keyInSelect(menuArray, 'Make selection');
+    
+        if(menuArray[menuSelect] == 'Lottery Game') {
+            
+            
+            //Call main menu
+            console.log('\033c');
+            playerLottoNum();
+        } else {
+            console.log('\033c');
+            console.log(color.red('You have chosen to quit the game'));
+            process.exit(0);
+        };
+    
+};
+
+
+
+//****************** MAIN PROGRAM STARTS HERE ************ */
+
+//Game main menu
+mainMenu();
+
+
+
+
+
+
+
+
+
+
+
+
+
