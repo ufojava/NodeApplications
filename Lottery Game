@@ -1,4 +1,3 @@
-
 /*
 Lotto Application
 
@@ -28,6 +27,9 @@ let weeklyLottoNumber = [];
 let playerOneName = '';
 let playerTwoName = '';
 let playerThreeName = '';
+
+//Prize money
+let prizeMoney = Number; 
 
 
 //Quit function
@@ -65,7 +67,7 @@ LottoGen = () => {
 
 //Function to take in User Number
 playerLottoNum = () => {
-    say.speak('Players menu. Select a player and enter your lotto numbers');
+    say.speak('Players menu. Select a player, enter your name and lotto numbers');
     console.log('\033c');
     console.log(color.cyan('---------------- PLAYERS MENU ----------------'));
     console.log('');
@@ -110,6 +112,7 @@ playerLottoNum = () => {
         //Take in lotto numbers
         for (let i = 0; i < 7; i ++) {
             let inNum = rdLnSync.questionInt(color.yellow('Input number : '));
+            say.speak(inNum);
 
             if (inNum > 60) {
              console.log(color.red('Input must be between 0 and 60, Exiting...'));
@@ -125,8 +128,13 @@ playerLottoNum = () => {
             //Player 2 Condition
     } else if (playerArray[playSelect] == 'Player 2') {
 
+        //Take Player two name
+        playerTwoName = rdLnSync.question('Enter your name: ');
+
+        //Take in lotto numbers
         for (let i = 0; i < 7; i ++) {
             let inNum2 = rdLnSync.questionInt(color.yellow('Input number : '));
+            say.speak(inNum2);
 
             if (inNum2 > 60) {
              console.log(color.red('Input must be between 0 and 60, Exiting...'));
@@ -140,8 +148,13 @@ playerLottoNum = () => {
             //Player 3 Condition
     } else if (playerArray[playSelect] == 'Player 3') {
 
+        //Take Player three name
+        playerThreeName = rdLnSync.question('Enter your name: ');
+
+        //Take in lotto numbers
         for (let i = 0; i < 7; i ++) {
             let inNum3 = rdLnSync.questionInt(color.yellow('Input number : '));
+            say.speak(inNum3);
 
             if (inNum3 > 60) {
              console.log(color.red('Input must be between 0 and 60, Exiting...'));
@@ -234,7 +247,12 @@ lottoMatch = () => {
 
             //Matching number count
             matchArrayOneCount = matchArrayOne.length;
-            say.speak(`${playerOneName} lotto numbers are ${playersOne}. Number match = ${matchArrayOneCount}`);
+
+            //Prize money calc function
+            prizeMoneyCalc(matchArrayOneCount);
+       
+            say.speak(`${playerOneName} lotto numbers are ${playersOne}. Number match = ${matchArrayOneCount}. Prize is ${prizeMoney} pounds`);
+        
             console.log(color.yellow(`Your numbers: ${playersOne}`));
             console.log(`Lotto numbers: ${weeklyLottoNumber}`);
             console.log('');
@@ -242,6 +260,7 @@ lottoMatch = () => {
 
             //Prize money
             lottoPrizeMoney(matchArrayOneCount);
+
 
             //Pause program to go to next player
             rdLnSync.keyInPause();
@@ -273,12 +292,16 @@ lottoMatch = () => {
 
             //Matching number count
             matchArrayTwoCount = matchArrayTwo.length;
-            say.speak(`Player 2 lotto numbers are ${playersTwo}. Number match = ${matchArrayTwoCount}` );
+
+            prizeMoneyCalc(matchArrayTwoCount);
+
+            say.speak(`${playerTwoName} lotto numbers are ${playersTwo}. Number match = ${matchArrayTwoCount}. Prize is ${prizeMoney} pounds`);
             console.log(color.yellow(`Your numbers: ${playersTwo}`));
             console.log(`Lotto numbers: ${weeklyLottoNumber}`);
             console.log('');
             console.log(color.cyan(matchArrayTwoCount, `Matches`));
 
+            //Prize money
             lottoPrizeMoney(matchArrayTwoCount);
 
             //Pause program to go to next player
@@ -312,12 +335,16 @@ lottoMatch = () => {
 
             //Matching number count
         matchArrayThreeCount = matchArrayThree.length;
-        say.speak(`Player 3 lotto numbers are ${playersThree}. Number match = ${matchArrayThreeCount}`);
+
+        prizeMoneyCalc(matchArrayTwoCount);
+
+        say.speak(`${playerThreeName} lotto numbers are ${playersThree}. Number match = ${matchArrayThreeCount}. Prize is ${prizeMoney} pounds`);
         console.log(color.yellow(`Your numbers: ${playersThree}`)) ;
         console.log(`Lotto numbers: ${weeklyLottoNumber}`);
         console.log('');
         console.log(color.cyan(matchArrayThreeCount, `Matches`));
-
+        
+        //Prize money
         lottoPrizeMoney(matchArrayThreeCount);
 
         //Pause program to go to next player
@@ -332,9 +359,25 @@ lottoMatch = () => {
 
 };
 
+//Prize money calculator
+prizeMoneyCalc = (inPrize) => {
+    if (inPrize == 3) {
+        prizeMoney = 10;
+    } else if (inPrize == 4) {
+        prizeMoney = 140;
+    } else if (inPrize == 5) {
+        prizeMoney = 1750;
+    } else if (inPrize== 6) {
+        prizeMoney = 1000000;
+    } else {
+        prizeMoney = 0
+    };
+};
 
 //Fuction to calculate prize money
 lottoPrizeMoney = (matchCount) => {
+
+    
 
     switch (matchCount) {
 
@@ -393,10 +436,6 @@ mainMenu = () => {
 
 //Game main menu
 mainMenu();
-
-
-
-
 
 
 
