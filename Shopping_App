@@ -1,0 +1,718 @@
+/*
+This is a shopping app that will:
+(1) Build a product stock list
+(2) Accpet client orders
+(3) Update stock upon order
+*/
+
+const {MongoClient, ObjectId} = require('mongodb');
+const rdLine = require('readline-sync');
+const color = require('colors');
+const columnify = require('columnify');
+
+//Database parameters
+let shopURL = 'mongodb://localhost:27017/ufotechshop';
+
+
+//Call Main Menu
+callMenu = () => {
+
+   console.log('Hit any key to call the main manu');
+   rdLine.keyInPause();
+   shopMenuList();  
+};
+
+//Call Report Menu
+callReportMenu = () => {
+
+    console.log('Hit any key to call the main manu');
+    rdLine.keyInPause();
+    shopReportMenu();
+ };
+
+//Form to enter new stock onto database
+newProdEntry = () => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        //Assign variable collection connection
+        let db = client.db('ufotechshop');
+
+
+            //Error checking
+            if (err) {
+
+                console.log(err)
+                } else {
+                console.log('Connected to the database')
+
+                //Retreive the last product code
+                db.collection('products').findOne({}, {sort: {_id: -1}}, (err, res) => {
+                
+                    console.log(color.green(`Last Product Code Entry is: ${res.Product_Code}. \nEnter the next number`));
+                    console.log('');
+                       //Terminal input
+                        let inProduct_Code   = rdLine.questionFloat('Enter new product code: ');
+                        let inProduct_Description  = rdLine.question('Enter description of new product: ');
+                        let inUnitCost = rdLine.questionFloat('Enter Unit cost: ');
+                        let inProduct_Qty = rdLine.questionInt('Enter quantity received: ');
+
+                        //Set Produce Code for Object
+                        let defaultCode = 'PROD' + inProduct_Code;
+
+                        //Product Object
+                        let shopProducts = {
+                        Product_Code:   defaultCode,
+                        Product_Description:    inProduct_Description,
+                        Product_Qty:    inProduct_Qty,
+                        Prodcut_Cost:   inUnitCost,
+                        Product_Create_Date:    new Date(),
+                        Product_ReOrder_Date:    new Date()
+
+                    };
+
+
+
+
+                 //Insert new product into collection
+                    db.collection('products').insertOne(shopProducts, (err, res) => {
+
+                        //Error checking
+                        if (err) {
+                            console.log(err)
+                            } else {
+                            console.log('\n');
+                            console.log(color.bgRed('****** NEW PRODUCT INSERTED ********'));
+                            console.log('');
+                            console.log(color.magenta(res.ops[0]));
+
+                            client.close();
+
+                            //Call Menu
+                            callMenu();
+                        };
+                    
+                    });
+                });
+                
+            
+            };            
+        
+
+    });
+
+        
+};
+
+//New client orders for items
+newClientOrders = () => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        //Assign access to db variable
+        let db = client.db('ufotechshop');
+
+        //Connection error report
+        if (err) {
+            console.log(err)
+            } else {
+            console.log('Connected to database')
+        };
+
+        //Get the order number which will represent the client ordernumber
+        let collCounter = db.collection('orders');
+        collCounter.countDocuments().then((count) => {
+         
+
+       
+        
+
+        //New order form
+        let Orders_Prd_Code  = rdLine.questionInt('Enter product code: ');  
+        let Orders_Name  = rdLine.question('Enter your name: ');
+        let Orders_Address = rdLine.question('Enter your address: ');
+        let Orders_Qty = rdLine.questionInt('Enter your quantity: ');
+        let Orders_Paid = rdLine.keyInYN('Has order been paid? ')
+
+        //Product prefix 
+        let prodPrefixCode = 'PROD' + Orders_Prd_Code;
+               
+
+        //Get order product information
+        db.collection('products').aggregate([
+            {
+                $match: {Product_Code:  prodPrefixCode}
+            
+            },
+            {
+                $project:   {_id: 0, Product_Code: 1, Product_Description: 1, Product_Unit_Cost: 1, Product_Qty: 1}
+            }
+        ]).toArray((err, res) => {
+                if (err) {
+                    console.log(err)
+                    } else {
+                    console.log(res);
+                
+                };
+
+                if (Orders_Qty > res[0].Product_Qty) {
+
+                     //Check the quantity against stock availability
+                    do {
+                    console.log(color.red(`${Orders_Qty} exceeds stock!!!`));
+                    Orders_Qty = rdLine.questionInt('Enter your quantity: ');
+                    }
+
+                    while (Orders_Qty > res[0].Product_Qty);
+
+
+                    };  
+            
+                    //New orders
+                    let newOrder = {
+                        Orders_Prd_Code:    res[0].Product_Code,
+                        Orders_Number: count + 1,
+                        Product_Description:    res[0].Product_Description,
+                        Orders_Name:    Orders_Name,
+                        Orders_Address: Orders_Address,
+                        Orders_Qty: Orders_Qty,
+                        Orders_Cost:    res[0].Product_Unit_Cost * Orders_Qty,
+                        Orders_Date:    new Date(),
+                        Orders_Paid:    Orders_Paid
+
+                    };
+                        db.collection('orders').insertOne(newOrder, (err,res) => {
+                        //Error checking
+                        if (err) {
+                            console.log(err);
+                            } else {
+                            console.log('\033c')
+                             console.log(res.ops[0])
+                            console.log('\n');
+                            console.log(color.bgRed('********** NEW RECORD HAS BEEN INSERTED ***********'));
+                        };
+
+                    });
+            
+
+                    //Update product quantity
+                    let newPrdQty = res[0].Product_Qty - Orders_Qty;
+                    let queryDB = {Product_Code:    res[0].Product_Code};
+                    let updateStock = {$set:    {Product_Qty:   newPrdQty}};
+
+                    db.collection('products').updateOne(queryDB, updateStock, (err, res) => {
+                    //Error checking
+                        if (err) {
+                            console.log(err)
+                            } else {
+                            console.log('\n');
+                            console.log(color.bgMagenta('*********** STOCK QTY UPDATED **************'));
+
+                             client.close();
+
+                             //Call Menu
+                             callMenu();
+                        };
+            
+            }); 
+            });
+            
+
+           
+
+        });
+
+        
+        
+    });
+
+
+
+};
+
+//Prodcut stock orders
+productReOrder = () => {
+
+    //Connec to the database
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err,client) => {
+
+        let db = client.db('ufotechshop');
+
+        if (err) {
+            console.log(err)
+        } else {
+            console.log('Connected to the database');
+        };
+
+        //Reorder details from terminal
+        let inProduct_Code = rdLine.questionInt('Enter product code: ');
+        let inProduct_Qty = rdLine.questionInt('Enter order quantity: ');
+
+        let ordDefaultPrdCode = 'PROD' + inProduct_Code;
+
+       db.collection('products').aggregate([
+           {
+               $match:  {Product_Code:  ordDefaultPrdCode}
+           }, 
+           {
+               $project:    {_id: 0, Product_Code: 1, Product_Qty: 1}
+           }
+                ]).toArray((err, res) => {
+                if (err) {
+               console.log(err)
+                } else {
+                console.log(res);
+
+               
+            };
+
+           //Add Order to stock levels
+           let newStockQty = res[0].Product_Qty + inProduct_Qty;
+            
+ 
+
+            //Update product quantity
+            let queryDB = {Product_Code: ordDefaultPrdCode};
+            let stockUpdate = {$set:  {Product_Qty:   newStockQty, Product_ReOrder_Date:  new Date()}};
+
+            db.collection('products').findOneAndUpdate(queryDB, stockUpdate, (err, res) => {
+
+                //Error checking
+                if (err) {
+                    console.log(err)
+                } else {
+                    console.log(res);
+                    console.log('\n');
+                    console.log(color.green(`New stock quantity for ${ordDefaultPrdCode}: ${newStockQty}`));
+                 
+                    client.close();
+
+                    //Call Menu
+                    callMenu();
+                };
+
+               
+            });           
+
+          
+       });
+
+    });
+};
+
+
+//Function to search database orders within a date range
+getOrderRecords = () => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+   
+
+        let db = client.db('ufotechshop');
+    
+        if (err) {
+            console.log(err)
+        } else {
+            console.log('connected to the database successfully');
+        };
+    
+    
+         //Take product code from terminal
+         console.log('\n');
+         console.log(color.green('******** ENTER PERIOD FROM **********'))
+         console.log('');
+         let readSrchYrFrom = rdLine.questionInt(('Enter start year YYYY: '));
+         let readSrchMthFrom = rdLine.questionInt(('Enter start month MM: '));
+         let readSrchDayFrom = rdLine.questionInt(('Enter start day DD: '));
+         
+    
+         console.log(color.green('******** ENTER PERIOD To **********'))
+         console.log('');
+         let readSrchYrTo = rdLine.questionInt(('Enter end year YYYY: '));
+         let readSrchMthTo = rdLine.questionInt(('Enter end month MM: '));
+         let readSrchDayTo = rdLine.questionInt(('Enter end day DD: '));
+    
+    
+         let newDateFrom = new Date(readSrchYrFrom,(readSrchMthFrom -1),readSrchDayFrom);
+         let newDateTo = new Date(readSrchYrTo,(readSrchMthTo -1),readSrchDayTo);
+         
+       
+    
+        db.collection('orders').aggregate([
+        
+            {
+                $match: {Orders_Date:  {$gte:  newDateFrom, $lte: newDateTo} }
+            },
+            {
+                $project:  {_id: 0, Orders_Name: 1, Orders_Prd_Code: 1, Product_Description: 1, Orders_Date: 1,}
+                
+    
+            }
+        ]).toArray((err, res) => {
+            if (err) {
+                console.log(err)
+            } else {
+                console.log('')
+                console.log(color.magenta('********** SAERCH RESULTS ********'))
+                console.log('');
+                console.log(columnify(res));
+
+                client.close();
+                
+                //Call Menu
+                callReportMenu();
+            };
+    
+        
+        });
+    
+    
+    });
+
+
+
+};
+
+//Get client orders
+clientOrdersRpt =() => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        let db = client.db('ufotechshop')
+        //Error checking
+        if (err) {
+            console.log(err);
+        } else {
+            console.log('Connected to database');
+        };
+
+        //Enter client name
+        let clientName = rdLine.question('Enter client name: ');
+
+        db.collection('orders').aggregate([
+            {
+                $match: {Orders_Name: {$regex: clientName, $options: 'i'}}
+            },
+
+            {
+                $project: {_id: 0, Orders_Name: 1, Orders_Prd_Code: 1, Product_Description: 1, Orders_Cost: 1}
+            }
+        ]).toArray((err, rpt) => { 
+            if (err) {
+                console.log(err);
+            } else {
+                console.log(columnify(rpt));
+
+                client.close();
+
+                //Call Menu
+                callReportMenu();
+            };
+        });
+
+
+
+    });
+
+};
+
+//Function to check orders payment status
+clientOrdersPayment = () => {
+
+    let inPayReport = rdLine.questionInt('Enter 1 for Paid or 2 for Unpaid: ');
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        let db = client.db('ufotechshop');
+
+        //Error checking
+        if (err) {
+            console.log(err)
+        } else {
+            console.log('Connect to database successfully');
+        };
+
+        if (inPayReport == 1) {
+            inPayReport = true;
+
+            //Connect to the collection
+            db.collection('orders').aggregate([
+                {
+                    $match: {Orders_Paid:   true}
+                },
+                {
+                    $project:   {_id: 0, Orders_Name: 1, Orders_Prd_Code: 1, Product_Description: 1, Orders_Cost: 1}
+                }
+            ]).toArray((err, rpt) => {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log(columnify(rpt));
+                };
+                client.close();
+
+                //Call Menu
+                callReportMenu();
+            });
+        } else if (inPayReport == 2) {
+
+             //Connect to the collection
+             db.collection('orders').aggregate([
+                {
+                    $match: {Orders_Paid:   false}
+                },
+                {
+                    $project:   {_id: 0, Orders_Name: 1, Orders_Prd_Code: 1, Product_Description: 1, Orders_Cost: 1}
+                }
+            ]).toArray((err, rpt) => {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log(columnify(rpt));
+                };
+                client.close();
+
+                //Call Menu
+                callReportMenu();
+            });
+
+        } else {
+            console.log('Invalid entry. Re-run and select 1 or 2');
+            client.close();
+        };
+
+        
+        
+    });
+};
+
+//This function is to make order payment
+payClientOrder = () => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        let db = client.db('ufotechshop');
+
+        //Error checking
+        if(err) {
+            console.log(err)
+        } else {
+            console.log('Connected to database');
+        };
+
+        //Take the order number for the terminal
+        let inClientOrderNumber = rdLine.questionInt('Enter the client order number: ');
+        //Query database for order to pay
+
+        let payDBQuery = {Orders_Number:    inClientOrderNumber, Orders_Paid: false};
+        let orderPaid = {$set: {Orders_Paid: true}};
+
+        //Connect to the collection - Orders
+        db.collection('orders').findOneAndUpdate(payDBQuery,orderPaid, (err, ordUpdate) => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log(ordUpdate);
+                console.log('\n');
+                console.log(color.bgRed('******* PAYMENT RECORD UPDATED ************'));
+
+                client.close();
+
+                //Call Menu
+                callMenu();
+
+            };
+        });
+
+    });
+
+};
+
+//Function to report on product orders and total
+sumPaidOrUnpaidOrders = () => {
+
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        let db = client.db('ufotechshop');
+        if (err) {
+            console.log(err);
+        } else {
+            console.log('Connected to the database');
+        };
+
+        //Get orders total of paid or unpaid
+        let orderStatus = rdLine.keyInYN(color.green('Y for Paid, N for Unpaid:'));
+
+        db.collection('orders').aggregate([
+
+            {
+                $match: {Orders_Paid: orderStatus}
+            },
+
+            {
+                $group: {_id: "$Orders_Prd_Code", Total: {$sum: "$Orders_Cost"}, count: {$sum: 1}}
+            },
+
+            {
+                $sort: {Total: -1}
+            },
+
+
+
+        ]).toArray((err, report) => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log('\n');
+                console.log(columnify(report));
+
+                client.close();
+
+                //Call Menu
+                callReportMenu();
+            };
+        });
+    
+    });
+
+};
+
+//Function to report stock levels
+shopStockQty = () => {
+
+    //Connect to the database
+    MongoClient.connect(shopURL, {useNewUrlParser: true}, (err, client) => {
+
+        let db = client.db('ufotechshop');
+
+        //Error checking
+        if (err) {
+            console.log(err);
+        } else {
+            console.log('Successfully connected to database');
+        };
+
+        //Connect to product collection
+        db.collection('products').aggregate([
+            {
+                $match: {}
+            },
+
+            {
+                $project: {_id: 0, Product_Code: 1, Product_Description: 1, Product_Qty: 1}
+            }
+        ]).toArray((err, data) => {
+            //Error checking
+            if (err) {
+                console.log(err);
+            } else {
+
+                //console.log(data);
+                console.log('\n');
+                    console.log(color.bgMagenta('********* PRODUCT STOCK LEVELS ***********'));
+                    console.log('\n');
+                    console.log(columnify(data));
+                console.log('\n');
+                //Call menu
+                client.close();
+                callReportMenu();
+            };
+
+        });
+
+
+
+
+    });
+}
+
+//Function to display Reporting menu
+shopReportMenu = () => {
+
+    let  reportList = ['Get Orders', 'Client Orders', 'All Orders Payment', 'Product Payments', 'Product Stock Levels'];
+
+    //Clear Screen
+    console.log('\033c');
+    console.log('\n');
+    console.log(color.bgMagenta('*********** UFOTECH SHOP REPORTING MENU **************'));
+    
+    //Request Selection from terminal
+    let makeSelection = rdLine.keyInSelect(reportList, 'Make Selection: ');
+
+    switch(true) {
+
+        case reportList[makeSelection] == 'Get Orders':
+        getOrderRecords();
+        break;
+
+        case reportList[makeSelection] == 'Client Orders':
+        clientOrdersRpt();
+        break;
+
+        case reportList[makeSelection] == 'All Orders Payment':
+        clientOrdersPayment();
+        break;
+
+        case reportList[makeSelection] == 'Product Payments':
+        sumPaidOrUnpaidOrders();
+        break;
+
+        case reportList[makeSelection] == 'Product Stock Levels':
+        shopStockQty();
+        break;
+
+        default:
+        shopMenuList();
+
+    };
+}
+//Application menu system
+shopMenuList = () => {
+    //Clear Screen
+    console.log('\033c');
+    console.log('\n');
+    console.log(color.bgMagenta('*********** UFOTECH SHOP MAIN MENU **************'));
+
+    let appList = ['Client Orders', 'Product Entry', 'Product Restock', 'Pay Client Order', 'Reports Menu'];
+    
+    //Request Selection from terminal
+    let makeSelection = rdLine.keyInSelect(appList, 'Make Selection: ');
+
+    switch(true) {
+        case appList[makeSelection] == 'Client Orders':
+        newClientOrders();
+        break;
+
+        case appList[makeSelection] == 'Product Entry':
+        newProdEntry();
+        break;
+
+        case appList[makeSelection] == 'Product Restock':
+        productReOrder();
+        break;
+
+        case appList[makeSelection] == 'Pay Client Order':
+        payClientOrder();
+        break;
+
+        case appList[makeSelection] == 'Reports Menu':
+        shopReportMenu();
+        break;
+
+        default:
+        console.log(color.red('You have chosen to exit application'));
+
+    };
+
+};
+
+
+
+
+
+
+//*************** MAIN PROGRAM STARTS HERE **************
+
+shopMenuList();
+
+
